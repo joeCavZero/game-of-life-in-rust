@@ -1,4 +1,4 @@
-use crate::{app::widgets::pixel_canvas::PixelCanvas, motor::{motor::Motor, scene::{BaseScene, Scene}}};
+use crate::{app::widgets::pixel_canvas::PixelCanvas, motor::{button::Button, motor::Motor, scene::{BaseScene, Scene}}};
 
 pub struct GameOfLifeScene {
     base_scene: BaseScene,
@@ -21,7 +21,11 @@ impl Scene for GameOfLifeScene {
         self.base_scene.init(motor);
 
         self.base_scene.add_widget(
-            Box::new(PixelCanvas::new("pixel canvas", 0))
+            Box::new(PixelCanvas::new("pixel canvas", 0, 10.0, 10.0, 500.0, 300.0, 2.0))
+        );
+
+        self.base_scene.add_widget(
+            Box::new(Button::new("button", 1, 10.0, 10.0, "hi")),
         );
     }
 

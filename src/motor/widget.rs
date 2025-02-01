@@ -19,14 +19,16 @@ pub struct BaseWidget {
     layer: u16,
 
     pub position: Vector2,
+    pub size: Vector2,
 }
 
 impl BaseWidget {
-    pub fn new(name: &str, layer: u16, x: f32, y: f32) -> BaseWidget {
+    pub fn new(name: &str, layer: u16, x: f32, y: f32, width: f32, height: f32) -> BaseWidget {
         BaseWidget {
             name: name.to_string(),
             layer: layer,
-            position: Vector2::new(x as f32, y as f32),
+            position: Vector2::new(x , y ),
+            size: Vector2::new(width, height ),
         }
     }
     pub fn get_name(&self) -> &String {

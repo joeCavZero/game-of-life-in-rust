@@ -12,16 +12,19 @@ pub struct PixelCanvas {
     pixels: [u8; PIXEL_CANVAS_LENGHT * PIXEL_CANVAS_LENGHT],
     tick_delay: u16,
 
+    inside_position: Vector2,
+
     zoom: f32,
 }
 
 impl PixelCanvas {
-    pub fn new(name: &str, layer: u16) -> PixelCanvas {
+    pub fn new(name: &str, layer: u16, x: f32, y: f32, width: f32, height: f32, zoom: f32) -> PixelCanvas {
         PixelCanvas {
-            base_widget: BaseWidget::new(name, layer, 0.0 ,0.0),
+            base_widget: BaseWidget::new(name, layer, x ,y , width, height),
             pixels: [0; PIXEL_CANVAS_LENGHT * PIXEL_CANVAS_LENGHT],
             tick_delay: 0,
-            zoom: 1.0,
+            inside_position: Vector2::new(0.0, 0.0),
+            zoom: zoom,
         }
     }
 
@@ -68,12 +71,12 @@ impl PixelCanvas {
 
     pub fn get_relative_mouse_position(&self, motor: &Motor) -> Vector2 {
         let raw_position = motor.get_mouse_position();
-
         let position = self.base_widget.position;
+        let inside_position = self.inside_position;
 
         Vector2::new(
-            (raw_position.x - position.x) / self.zoom,
-            (raw_position.y - position.y) / self.zoom,
+            (raw_position.x - position.x - inside_position.x) / self.zoom,
+            (raw_position.y - position.y - inside_position.y) / self.zoom,
         )
     }
 }
@@ -106,9 +109,7 @@ impl Widget for PixelCanvas {
     
 
 
-    fn init(&mut self, motor: &mut Motor) {
-        
-    }
+    fn init(&mut self, motor: &mut Motor) {}
     fn update(&mut self, motor: &mut Motor) {
         self.tick_delay += 1;
         if self.tick_delay >= 120 {
@@ -117,7 +118,6 @@ impl Widget for PixelCanvas {
         }
 
         if motor.is_action_just_pressed("mouse_left_click") {
-            println!("Mouse left click");
             let mouse_pos = self.get_relative_mouse_position(motor);
             let x = (mouse_pos.x / 10.0) as i64;
             let y = (mouse_pos.y / 10.0) as i64;
@@ -136,42 +136,65 @@ impl Widget for PixelCanvas {
         }
 
         if motor.is_action_down("up") {
-            self.base_widget.position.y -= 10.0;
+            self.inside_position.y -= 10.0;
         } else if motor.is_action_down("down") {
-            self.base_widget.position.y += 10.0;
+            self.inside_position.y += 10.0;
         }
 
         if motor.is_action_down("left") {
-            self.base_widget.position.x -= 10.0;
+            self.inside_position.x -= 10.0;
         } else if motor.is_action_down("right") {
-            self.base_widget.position.x += 10.0;
+            self.inside_position.x += 10.0;
         }
     }
-    fn render(&mut self, motor: &mut Motor, d: &mut RenderTextureModeDrawHandle<'_> ) {
-        
+    fn render(&mut self, _motor: &mut Motor, d: &mut RenderTextureModeDrawHandle<'_> ) {
         d.draw_rectangle(
             self.base_widget.position.x as i32, 
             self.base_widget.position.y as i32, 
-            (PIXEL_SIZE as f32 * PIXEL_CANVAS_LENGHT as f32 * self.zoom) as i32, 
-            (PIXEL_SIZE as f32 * PIXEL_CANVAS_LENGHT as f32 * self.zoom) as i32, 
+            self.base_widget.size.x as i32,
+            self.base_widget.size.y as i32, 
             Color::BLACK,
         );
-        
-        let position = self.base_widget.position;
-        let zoom = self.zoom;
+
+        let inside_x = (self.base_widget.position.x + self.inside_position.x).clamp(self.base_widget.position.x, self.base_widget.position.x + self.base_widget.size.x);
+        let inside_y = (self.base_widget.position.y + self.inside_position.y).clamp(self.base_widget.position.y, self.base_widget.position.y + self.base_widget.size.y);
+        let inside_width = (self.base_widget.size.x * self.zoom).min(self.base_widget.size.x - (inside_x - self.base_widget.position.x));
+        let inside_height = (self.base_widget.size.y * self.zoom).min(self.base_widget.size.y - (inside_y - self.base_widget.position.y));
+
+        d.draw_rectangle(
+            inside_x as i32,
+            inside_y as i32,
+            inside_width as i32,
+            inside_height as i32,
+            Color::RED,
+        );
+
+        let zoom: f32 = self.zoom;
 
         for i in 0..self.pixels.len() {
             let x = i % PIXEL_CANVAS_LENGHT;
             let y = i / PIXEL_CANVAS_LENGHT;
 
             if self.pixels[i] > 0 {
+                let pixel_x = (self.base_widget.position.x + self.inside_position.x + x as f32 * PIXEL_SIZE as f32 * zoom) as i32;
+                let pixel_y = (self.base_widget.position.y + self.inside_position.y + y as f32 * PIXEL_SIZE as f32 * zoom) as i32;
+                let pixel_width = PIXEL_SIZE as f32 * zoom;
+                let pixel_height = PIXEL_SIZE as f32 * zoom;
+
+                // the pixel drawing must be inside the the second draw above
+
+                let inside_pixel_x = (pixel_x as f32).clamp(inside_x, inside_x + inside_width);
+                let inside_pixel_y = (pixel_y as f32).clamp(inside_y, inside_y + inside_height);
+                let inside_pixel_width = (pixel_width).min(inside_x + inside_width - inside_pixel_x);
+                let inside_pixel_height = (pixel_height).min(inside_y + inside_height - inside_pixel_y);
                 d.draw_rectangle(
-                    (position.x + x as f32 * PIXEL_SIZE as f32 * zoom) as i32, 
-                    (position.y + y as f32 * PIXEL_SIZE as f32 * zoom) as i32, 
-                    (PIXEL_SIZE as f32 * zoom) as i32, 
-                    (PIXEL_SIZE as f32 * zoom) as i32, 
+                    inside_pixel_x as i32,
+                    inside_pixel_y as i32,
+                    inside_pixel_width as i32,
+                    inside_pixel_height as i32,
                     Color::WHITE,
                 );
+                
             }
         }
     }
