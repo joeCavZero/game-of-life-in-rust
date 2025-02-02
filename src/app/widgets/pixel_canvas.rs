@@ -5,12 +5,13 @@ use raylib::prelude::*;
 use crate::motor::{motor::{Motor, RenderTextureModeDrawHandle}, widget::{BaseWidget, Widget}};
 
 const PIXEL_SIZE: i32 = 10;
-const PIXEL_CANVAS_LENGHT: usize = 64;
+const PIXEL_CANVAS_LENGHT: usize = 200;
 const PIXEL_CANVAS_SIZE: usize = PIXEL_CANVAS_LENGHT * PIXEL_CANVAS_LENGHT;
 pub struct PixelCanvas {
     base_widget: BaseWidget,
     pixels: [u8; PIXEL_CANVAS_LENGHT * PIXEL_CANVAS_LENGHT],
-    tick_delay: u16,
+    tick_count: u16,
+    tick_speed: u16,
 
     internal_position: Vector2,
 
@@ -22,7 +23,8 @@ impl PixelCanvas {
         PixelCanvas {
             base_widget: BaseWidget::new(name, layer, x ,y , width, height),
             pixels: [0; PIXEL_CANVAS_LENGHT * PIXEL_CANVAS_LENGHT],
-            tick_delay: 0,
+            tick_count: 0,
+            tick_speed: 120,
             internal_position: Vector2::new(0.0, 0.0),
             zoom: zoom,
         }
@@ -79,6 +81,24 @@ impl PixelCanvas {
             (raw_position.y - position.y - internal_position.y) / self.zoom,
         )
     }
+
+    pub fn set_tick_speed(&mut self, speed: u16) {
+        self.tick_speed = speed;
+    }
+
+    pub fn clear(&mut self) {
+        self.pixels = [0; PIXEL_CANVAS_SIZE];
+    }
+
+    pub fn random(&mut self) {
+        for i in 0..self.pixels.len() {
+            if rand::random_bool(0.5) {
+                self.pixels[i] = 1;
+            } else {
+                self.pixels[i] = 0;
+            }
+        }
+    }
 }
 
 fn update_pixel(arr: &mut [u8; PIXEL_CANVAS_SIZE], x: i64, y: i64, value: u8) {
@@ -109,10 +129,10 @@ impl Widget for PixelCanvas {
     fn init(&mut self, _motor: &mut Motor) {}
 
     fn update(&mut self, motor: &mut Motor) {
-        self.tick_delay += 1;
-        if self.tick_delay >= 120 {
+        self.tick_count += 1;
+        if self.tick_speed != 0 && self.tick_count >= self.tick_speed {
             self.tick();
-            self.tick_delay = 0;
+            self.tick_count = 0;
         }
 
         if self.base_widget.is_mouse_over(motor) && motor.is_action_just_pressed("mouse_left_button") {
@@ -133,14 +153,29 @@ impl Widget for PixelCanvas {
         }
 
         if self.base_widget.is_mouse_over(motor) {
+            let mouse_pos = motor.get_mouse_position();
+        
+            let mut zoom_factor = 1.0;
+        
             if motor.is_action_just_pressed("mouse_wheel_up") {
-                self.zoom += 0.1;
+                zoom_factor = 1.1;
             } else if motor.is_action_just_pressed("mouse_wheel_down") {
-                self.zoom -= 0.1;
+                zoom_factor = 0.9;
+            }
+        
+            if zoom_factor != 1.0 {
+                let prev_zoom = self.zoom;
+                self.zoom = (self.zoom * zoom_factor).max(1e-6); // Evita zoom zero ou negativo
+        
+                let zoom_delta = 1.0 - (self.zoom / prev_zoom);
+                self.internal_position += (mouse_pos - self.internal_position) * zoom_delta;
             }
         }
+
         if self.zoom < 0.1 {
             self.zoom = 0.1;
+        } else if self.zoom > 10.0 {
+            self.zoom = 10.0;
         }
 
         let mouse_motion = motor.get_mouse_motion();
