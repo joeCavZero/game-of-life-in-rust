@@ -14,6 +14,8 @@ pub struct Motor {
     running: bool,
 
     scene: Option<Box<dyn Scene>>,
+
+    old_mouse_position: Vector2,
 }
 
 impl Motor {
@@ -38,6 +40,8 @@ impl Motor {
             running: false,
             scene: None,
             canvas_size: (canvas_width, canvas_height),
+
+            old_mouse_position: Vector2::new(0.0, 0.0),
         }
     }
     
@@ -57,6 +61,8 @@ impl Motor {
     pub fn update(&mut self) {
         let aux = self as *mut Motor;
         self.get_scene().unwrap().update(unsafe { &mut *aux });
+
+        self.old_mouse_position = self.get_mouse_position();
     }
 
     pub fn render(&mut self) {
@@ -73,7 +79,7 @@ impl Motor {
         {
             
             let mut t = d.begin_texture_mode(&self.thread, &mut self.canvas);
-            t.clear_background(Color::DARKGREEN);
+            t.clear_background(Color{r: 100,g: 100,b: 100,a: 255});
             
             self.scene.as_mut().unwrap().render( unsafe { &mut *aux }, &mut t);
 
@@ -101,6 +107,9 @@ impl Motor {
             "right" => self.rl.is_key_down(KeyboardKey::KEY_D) || self.rl.is_key_down(KeyboardKey::KEY_RIGHT),
             "left" => self.rl.is_key_down(KeyboardKey::KEY_A) || self.rl.is_key_down(KeyboardKey::KEY_LEFT),
             
+            "mouse_left_button" => self.rl.is_mouse_button_down(MouseButton::MOUSE_BUTTON_LEFT),
+            "mouse_right_button" => self.rl.is_mouse_button_down(MouseButton::MOUSE_BUTTON_RIGHT),
+
             "i" => self.rl.is_key_down(KeyboardKey::KEY_I),
             "k" => self.rl.is_key_down(KeyboardKey::KEY_K),
             _ => false,
@@ -109,10 +118,20 @@ impl Motor {
 
     pub fn is_action_just_pressed(&self, action: &str) -> bool {
         match action {
-            "mouse_left_click" => self.rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT),
+            "mouse_left_button" => self.rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT),
+            "mouse_wheel_up" => self.rl.get_mouse_wheel_move() > 0.0,
+            "mouse_wheel_down" => self.rl.get_mouse_wheel_move() < 0.0,
             "start" => self.rl.is_key_pressed(KeyboardKey::KEY_ENTER),
             _ => false,
         }
+    }
+
+    pub fn get_mouse_motion(&self) -> Vector2 {
+        let old_pos = self.old_mouse_position;
+        let new_pos = self.get_mouse_position();
+
+        new_pos - old_pos
+
     }
 
     pub fn get_mouse_position(&self) -> Vector2 {

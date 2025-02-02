@@ -39,13 +39,14 @@ impl BaseScene {
         
     }
 
-    pub fn add_widget(&mut self, mut wid: Box<dyn Widget>) {
+    pub fn add_widget(&mut self, mut wid: Box<dyn Widget>) -> &mut Self {
         
         unsafe { wid.init(&mut *self.motor.unwrap()) }
         self.widgets.push(wid);
 
         self.widgets.sort_by(|a, b| a.get_base_widget().get_layer().cmp(&b.get_base_widget().get_layer()));
 
+        self
     }
 
 

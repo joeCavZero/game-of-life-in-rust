@@ -37,4 +37,11 @@ impl BaseWidget {
     pub fn get_layer(&self) -> u16 {
         self.layer
     }
+
+    pub fn is_mouse_over(&self, motor: &Motor) -> bool {
+        let mouse_pos = motor.get_mouse_position();
+        let self_pos = self.position;
+        let self_size = self.size;
+        mouse_pos.x >= self_pos.x && mouse_pos.x <= self_pos.x + self_size.x && mouse_pos.y >= self_pos.y && mouse_pos.y <= self_pos.y + self_size.y
+    }
 }
