@@ -1,4 +1,4 @@
-use proj04::{app::scenes::game_of_life::GameOfLifeScene, motor::motor::Motor};
+use game_of_life::{app::scenes::game_of_life::GameOfLifeScene, motor::motor::Motor};
 
 
 
